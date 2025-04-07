@@ -1,0 +1,9 @@
+{
+    "cmake.sourceDirectory": "D:/Work/Flutter-Projects/alzahra/alzahra/linux",
+    "workbench.colorCustomizations": {
+        "activityBar.background": "#0E323C",
+        "titleBar.activeBackground": "#144654",
+        "titleBar.activeForeground": "#F7FCFD"
+    },
+    "java.configuration.updateBuildConfiguration": "interactive"
+}

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "861033561476",
+    "project_id": "malzahra",
+    "storage_bucket": "malzahra.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:861033561476:android:7c8d60140ad23265a4b1d1",
+        "android_client_info": {
+          "package_name": "com.dijlah.malzahra"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA20mMW9A_JV2JDsj6c05Mr9YhVSdDFJF0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
