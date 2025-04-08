@@ -4,6 +4,7 @@ import 'package:alzahra/features/feature_intro/screens/splash_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_downloader/flutter_downloader.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:gap/gap.dart';
 import 'package:lottie/lottie.dart';
@@ -31,9 +32,13 @@ void main() async {
     );
   };
   await GetStorage.init();
-  // await Firebase.initializeApp();
-  // await FirebaseMessaging.instance.subscribeToTopic("general");
-  // await FirebaseApi().inintNotifications();
+  await FlutterDownloader.initialize(
+    debug: true,
+    ignoreSsl: true,
+  );
+  await Firebase.initializeApp();
+  await FirebaseMessaging.instance.subscribeToTopic("general");
+  await FirebaseApi().inintNotifications();
   runApp(const MyApp());
 }
 

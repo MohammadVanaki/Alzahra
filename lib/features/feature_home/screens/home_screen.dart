@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:alzahra/common/utils/costum_dialog_message.dart';
 import 'package:alzahra/common/utils/costum_loading.dart';
 import 'package:alzahra/config/constants.dart';
@@ -10,8 +12,10 @@ import 'package:gap/gap.dart';
 import 'package:page_transition/page_transition.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:webview_flutter/webview_flutter.dart';
-import 'package:flutter_file_downloader/flutter_file_downloader.dart';
+// import 'package:flutter_file_downloader/flutter_file_downloader.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:flutter_downloader/flutter_downloader.dart';
+import 'package:path_provider/path_provider.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -644,20 +648,29 @@ class _HomePageState extends State<HomePage> {
         }
       }
       if (!find) {
-        FileDownloader.downloadFile(
+        // English comment: Get public download directory (platform-specific)
+        final baseStorage = Platform.isAndroid
+            ? '/storage/emulated/0/Download' // For Android manually
+            : (await getApplicationDocumentsDirectory()).path; // For iOS
+
+        print('baseStorage ====>$baseStorage');
+
+        // English comment: Enqueue download task
+        await FlutterDownloader.enqueue(
           url: url.trim(),
-          name: fileName,
-          downloadDestination: DownloadDestinations.publicDownloads,
-        ).then(
-          (value) {
-            debugPrint('complate======================???');
-            audioesList.add({
-              'audioName': filetitle,
-              'fileName': fileName,
-            });
-            Constants.getStorage.write('audioes', audioesList);
-          },
+          savedDir: baseStorage,
+          fileName: fileName,
+          showNotification: true,
+          openFileFromNotification: true,
         );
+
+        // English comment: Save file info after download completion
+        audioesList.add({
+          'audioName': filetitle,
+          'fileName': fileName,
+        });
+
+        Constants.getStorage.write('audioes', audioesList);
       }
     } else if (fileFormt == '.pdf') {
       await GetStorage.init('pdfs');
@@ -682,15 +695,31 @@ class _HomePageState extends State<HomePage> {
       }
 
       if (!find) {
-        FileDownloader.downloadFile(
+        // English comment: Get platform-specific storage directory
+        final Directory baseDir;
+        if (Platform.isAndroid) {
+          baseDir = Directory('/storage/emulated/0/Download');
+        } else {
+          baseDir = await getApplicationDocumentsDirectory();
+        }
+
+        final savedDir = baseDir.path;
+
+        // English comment: Start downloading the PDF file
+        await FlutterDownloader.enqueue(
           url: url.trim(),
-          name: fileName,
-          downloadDestination: DownloadDestinations.publicDownloads,
+          savedDir: savedDir,
+          fileName: fileName,
+          showNotification: true, // Show notification while downloading
+          openFileFromNotification: true, // Open file on tap from notification
         );
+
+        // English comment: Save PDF file info after enqueuing download
         pdfsList.add({
           'pdfName': filetitle,
           'fileName': fileName,
         });
+
         Constants.getStorage.write('pdfs', pdfsList);
       }
     }
