@@ -19,7 +19,13 @@ class OfflineItemCard extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: <Widget>[
-          Text(title),
+          Expanded(
+            child: Text(
+              title,
+              softWrap: true,
+              overflow: TextOverflow.visible,
+            ),
+          ),
           Image.asset(
             imagePath,
             height: 40,

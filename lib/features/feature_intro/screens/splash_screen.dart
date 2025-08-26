@@ -31,7 +31,7 @@ class _SplashScreenState extends State<SplashScreen> {
           alignment: Alignment.center,
           children: [
             Image.asset(
-              'assets/images/splash.jpg',
+              'assets/images/splash-2.jpg',
               fit: BoxFit.fill,
               height: size.height,
             ),

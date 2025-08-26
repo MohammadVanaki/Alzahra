@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'dart:isolate';
+import 'dart:ui';
 
 import 'package:alzahra/common/utils/costum_dialog_message.dart';
 import 'package:alzahra/common/utils/costum_loading.dart';
@@ -6,6 +8,7 @@ import 'package:alzahra/config/constants.dart';
 import 'package:alzahra/features/feature_home/widgets/notif_card.dart';
 import 'package:alzahra/features/feature_intro/screens/login_screen.dart';
 import 'package:alzahra/features/feature_offline/screens/main_offline_screen.dart';
+import 'package:alzahra/main.dart';
 import 'package:flutter/material.dart';
 import 'package:animated_bottom_navigation_bar/animated_bottom_navigation_bar.dart';
 import 'package:gap/gap.dart';
@@ -16,6 +19,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:flutter_downloader/flutter_downloader.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -30,6 +34,8 @@ class _HomePageState extends State<HomePage> {
   bool pageFinished = true;
   String pageContent = 'grid';
   String pdfName = '';
+  // final ValueNotifier<bool> showDownloadPanelNotifier =
+  //     ValueNotifier<bool>(false);
 
   WebViewController controller = WebViewController();
   final List<IconData> iconList = <IconData>[
@@ -38,7 +44,6 @@ class _HomePageState extends State<HomePage> {
     Icons.menu_book_rounded,
     Icons.note_alt,
   ];
-
   final List servicesList = [
     {'title': 'المعلومات الشخصية', 'icon': 'information.png'},
     {'title': 'الصوتيات', 'icon': 'sound.png'},
@@ -55,6 +60,7 @@ class _HomePageState extends State<HomePage> {
     {'title': 'طباعة ', 'icon': 'print.png'},
     {'title': 'ملاحظات ', 'icon': 'notification.png'},
     {'title': 'من نحن ', 'icon': 'about.png'},
+    {'title': 'الغاء العضوية', 'icon': 'delete-user.png'},
   ];
   List<String> titleContent = [];
   List<String> bodyContent = [];
@@ -71,6 +77,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+    bindBackgroundIsolate();
     controller
       ..addJavaScriptChannel(
         'Print11',
@@ -89,6 +96,13 @@ class _HomePageState extends State<HomePage> {
         },
       );
     _getContents();
+    showDownloadPanelNotifier.addListener(() {
+      if (showDownloadPanelNotifier.value) {
+        print("Download panel should show");
+      } else {
+        print("Download panel should hide");
+      }
+    });
   }
 
   String newUrl = '';
@@ -196,36 +210,48 @@ class _HomePageState extends State<HomePage> {
                 child: AnimatedOpacity(
                   duration: const Duration(milliseconds: 300),
                   opacity: loadContent ? 0 : 1,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.center,
+                  child: Row(
                     children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(100),
-                        child: FadeInImage.assetNetwork(
-                          placeholder: 'assets/images/profile-vector.jpg',
-                          image:
-                              Constants.getStorage.read('userData')['photo'] ??
-                                  'https://shorturl.at/tCkpS',
-                          width: 90,
-                          height: 90,
-                        ),
-                      ),
-                      const Gap(5),
-                      Text(
-                        Constants.getStorage.read('userData')['name'] ?? '',
-                        style: TextStyle(
-                          color: Colors.white,
-                        ),
-                      ),
-                      const Gap(5),
-                      Text(
-                        Constants.getStorage.read('userData')['study_stages'] ??
-                            '',
-                        style: TextStyle(
-                          color: Colors.white60,
-                          fontSize: 10,
-                        ),
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(100),
+                            child: FadeInImage.assetNetwork(
+                              placeholder: 'assets/images/profile-vector.jpg',
+                              // Use user photo if available, otherwise fallback to default avatar
+                              image: (Constants.getStorage.read('userData') !=
+                                          null &&
+                                      Constants.getStorage
+                                              .read('userData')['photo'] !=
+                                          null)
+                                  ? Constants.getStorage
+                                      .read('userData')['photo']
+                                  : 'https://ui-avatars.com/api/?name=User&background=0D8ABC&color=fff&rounded=true',
+                              width: 90,
+                              height: 90,
+                              fit: BoxFit.cover, // Cover image in rounded box
+                            ),
+                          ),
+                          const Gap(5),
+                          Text(
+                            Constants.getStorage.read('userData')['name'] ?? '',
+                            style: TextStyle(
+                              color: Colors.white,
+                            ),
+                          ),
+                          const Gap(5),
+                          Text(
+                            Constants.getStorage
+                                    .read('userData')['study_stages'] ??
+                                '',
+                            style: TextStyle(
+                              color: Colors.white60,
+                              fontSize: 10,
+                            ),
+                          )
+                        ],
                       ),
                     ],
                   ),
@@ -362,6 +388,31 @@ class _HomePageState extends State<HomePage> {
                                         controller.loadRequest(Uri.parse(
                                             'https://m-alzahra.com/Account?app'));
                                         break;
+                                      case 14:
+                                        setState(() {
+                                          pageContent = 'grid';
+                                       
+                                        });
+                                        dialogBuilder(
+                                          context: context,
+                                          titleText:
+                                              'هل انت متأكد من حذف حسابك؟',
+                                          disableText: 'لا',
+                                          enableText: 'نعم',
+                                          enable: () {
+                                            Constants.getStorage
+                                                .remove('userData');
+                                            Navigator.pushReplacement(
+                                              context,
+                                              PageTransition(
+                                                child: const LoginPage(),
+                                                type: PageTransitionType
+                                                    .bottomToTop,
+                                              ),
+                                            );
+                                          },
+                                        );
+                                        break;
                                       default:
                                     }
                                   },
@@ -404,22 +455,8 @@ class _HomePageState extends State<HomePage> {
                                   ? WebViewWidget(
                                       controller: controller
                                         ..setJavaScriptMode(
-                                          JavaScriptMode.unrestricted,
-                                        )
-                                        ..runJavaScript("""
-                                            // if (document.querySelectorAll(".download_link").length) {
-                                              let navLinks = document.querySelectorAll(".download_link");
-                                              navLinks.forEach(function (link) {
-                                                link.addEventListener("click", function (event) {
-                                                  var val = link.getAttribute("title")+"+"+link.getAttribute("data-id");
-                                                  // alert(val);
-
-                                                  Print11.postMessage(val);
-                                                });
-                                              });
-                                            // }
-
-                                                    """)
+                                            JavaScriptMode.unrestricted)
+                                        ..setBackgroundColor(Colors.white)
                                         ..setNavigationDelegate(
                                           NavigationDelegate(
                                             onProgress: (int progress) {
@@ -436,52 +473,117 @@ class _HomePageState extends State<HomePage> {
                                               }
                                             },
                                             onNavigationRequest: (request) {
-                                              if (request.url.contains('pdf')) {
-                                                var uri = request.url;
-                                                var encoded = Uri.decodeFull(
-                                                    uri.split('#')[1]);
-                                                var n =
-                                                    encoded.lastIndexOf('#');
-                                                pdfName =
-                                                    encoded.substring(n + 1);
-                                                debugPrint(
-                                                    'pdfName==========-====>>>${pdfName} ');
-                                                debugPrint(
-                                                    'onNavigationRequest==========-====>>>${request.url} ');
-                                                var n11 = request.url
-                                                    .lastIndexOf('/');
-                                                fileName = request.url
-                                                    .substring(n11 + 1);
-                                                fileName =
-                                                    fileName.split('#')[2] +
-                                                        '.pdf';
+                                              final uri =
+                                                  Uri.parse(request.url);
 
-                                                checkShouldDownload(request.url,
-                                                    fileName, pdfName);
+                                              // بررسی فایل صوتی mp3
+                                              if (uri.path.endsWith('.mp3')) {
+                                                // استخراج نام فایل و عنوان (بسته به ساختار خودت)
+                                                final dateList = audioName.split(
+                                                    "+"); // یا هر روش دیگه شما
+                                                final fileName =
+                                                    '${dateList[1]}.mp3';
+                                                final fileTitle = dateList[0];
+
+                                                // شروع دانلود
+                                                checkShouldDownload(
+                                                    context,
+                                                    request.url,
+                                                    fileName,
+                                                    fileTitle);
+
+                                                // جلوی حرکت WebView به اون URL رو بگیر
                                                 return NavigationDecision
                                                     .prevent;
                                               }
+
+                                              // بررسی فایل PDF
+                                              if (uri.path.endsWith('.pdf')) {
+                                                final fileName =
+                                                    uri.pathSegments.isNotEmpty
+                                                        ? uri.pathSegments.last
+                                                        : 'file.pdf';
+                                                final fragment =
+                                                    uri.fragment.isNotEmpty
+                                                        ? Uri.decodeFull(
+                                                            uri.fragment)
+                                                        : '';
+                                                final cleanPdfName = fragment
+                                                    .split('#')[0]
+                                                    .trim();
+
+                                                pdfName = cleanPdfName;
+
+                                                checkShouldDownload(
+                                                    context,
+                                                    request.url,
+                                                    fileName,
+                                                    pdfName);
+
+                                                return NavigationDecision
+                                                    .prevent;
+                                              }
+
+                                              // اجازه ادامه مسیر برای سایر URL ها
                                               return NavigationDecision
                                                   .navigate;
                                             },
                                             onPageStarted: (url) async {
                                               debugPrint(
-                                                  'onPageStarted==========-====>>>${url} ');
-                                              if (url.contains('mp3')) {
+                                                  'onPageStarted==========-====>>>$url');
+
+                                              final uri = Uri.parse(url);
+
+                                              if (uri.path.endsWith('.mp3')) {
                                                 final dateList =
                                                     audioName.split("+");
-                                                checkShouldDownload(
-                                                    url,
-                                                    dateList[1] + '.mp3',
-                                                    dateList[0]);
+                                                final fileName =
+                                                    '${dateList[1]}.mp3';
+                                                final fileTitle = dateList[0];
+
+                                                checkShouldDownload(context,
+                                                    url, fileName, fileTitle);
+                                              } else if (uri.path
+                                                  .endsWith('.pdf')) {
+                                                final fileName =
+                                                    uri.pathSegments.isNotEmpty
+                                                        ? uri.pathSegments.last
+                                                        : 'file.pdf';
+
+                                                var rawTitle =
+                                                    uri.fragment.isNotEmpty
+                                                        ? Uri.decodeFull(
+                                                            uri.fragment)
+                                                        : 'PDF Document';
+
+                                                final cleanTitle = rawTitle
+                                                    .split('#')[0]
+                                                    .trim();
+
+                                                checkShouldDownload(context,
+                                                    url, fileName, cleanTitle);
                                               }
                                             },
                                             onPageFinished: (url) {
                                               debugPrint(
-                                                  'onPageFinished==========-====>>>${url} ');
+                                                  'onPageFinished==========-====>>>$url');
+
+                                              // جاوااسکریپت برای تنظیم بک‌گراند صفحه به سفید
+                                              controller.runJavaScript(
+                                                "document.body.style.backgroundColor = 'white';",
+                                              );
                                             },
                                           ),
-                                        ),
+                                        )
+                                        ..runJavaScript("""
+                                    let navLinks = document.querySelectorAll(".download_link");
+                                    navLinks.forEach(function (link) {
+                                      link.addEventListener("click", function (event) {
+                                        var val = link.getAttribute("title") + "+" + link.getAttribute("data-id");
+                                        Print11.postMessage(val);
+                                      });
+                                    });
+                                  """),
                                     )
                                   : Center(
                                       child: Column(
@@ -536,7 +638,76 @@ class _HomePageState extends State<HomePage> {
                                   ),
                                 ),
                 ),
-              )
+              ),
+              Positioned.fill(
+                child: ValueListenableBuilder<bool>(
+                  valueListenable: showDownloadPanelNotifier,
+                  builder: (context, show, _) {
+                    if (!show) return const SizedBox.shrink();
+                    return Container(
+                      width: size.width,
+                      height: size.height,
+                      color: Colors.black54,
+                      child: Center(
+                        child: Container(
+                          width: 300,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.primary,
+                            borderRadius: BorderRadius.circular(6),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black26,
+                                blurRadius: 10,
+                                offset: Offset(0, 4),
+                              )
+                            ],
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text(
+                                'تحميل الملف...',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const Gap(16),
+                              const LoadingProgress(),
+                              const Gap(16),
+                              // progress bar
+                              ValueListenableBuilder<int>(
+                                valueListenable: DownloadProgress.progress,
+                                builder: (context, value, _) {
+                                  return Column(
+                                    children: [
+                                      LinearProgressIndicator(
+                                        value: value / 100,
+                                        backgroundColor: Colors.white24,
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                                Colors.white),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        '$value%',
+                                        style: const TextStyle(
+                                            color: Colors.white),
+                                      ),
+                                    ],
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
             ],
           ),
         ),
@@ -617,111 +788,94 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  checkShouldDownload(String url, String fileName, String filetitle) async {
-    // var n = url.lastIndexOf('/');
-    // fileName = url.substring(n + 1);
-    // fileName = fileName.split('#')[2] + '.pdf';
-    debugPrint("fileName===========================>>>" + fileName);
-    debugPrint("filetitle===========================>>>" + filetitle);
+  Future<void> checkShouldDownload(
+    BuildContext context,
+    String url,
+    String fileName,
+    String filetitle,
+  ) async {
+    final cleanTitle = filetitle.split('#')[0].trim();
+    final fileExtension = p.extension(fileName);
+    print("fileExtension=====>$fileExtension");
 
-    String fileFormt = fileName.substring(fileName.length - 4);
-    debugPrint("fileFormt===========================>>>" + fileFormt);
-    if (fileFormt == '.mp3') {
-      await GetStorage.init('audioes');
-      List audioesList = Constants.getStorage.read('audioes') ?? [];
+    if (fileExtension == '.mp3' || fileExtension == '.pdf') {
+      final boxName = fileExtension == '.mp3' ? 'audioes' : 'pdfs';
+      final listKey = fileExtension == '.mp3' ? 'audioName' : 'pdfName';
 
-      var find = false;
-      for (var map in audioesList) {
-        if (map?.containsKey("audioName") ?? false) {
-          if (map!["audioName"] == filetitle) {
-            find = true;
-            dialogBuilder(
-              context: context,
-              titleText: 'تم تحميل هذا الملف مسبقا!',
-              disableText: '',
-              enableText: 'اغلاق',
-              enable: () {
-                Navigator.of(context).pop();
-              },
-            );
-          }
-        }
-      }
-      if (!find) {
-        // English comment: Get public download directory (platform-specific)
-        final baseStorage = Platform.isAndroid
-            ? '/storage/emulated/0/Download' // For Android manually
-            : (await getApplicationDocumentsDirectory()).path; // For iOS
+      await GetStorage.init(boxName);
+      final storage = GetStorage(boxName);
+      List filesList = storage.read(boxName) ?? [];
 
-        print('baseStorage ====>$baseStorage');
-
-        // English comment: Enqueue download task
-        await FlutterDownloader.enqueue(
-          url: url.trim(),
-          savedDir: baseStorage,
-          fileName: fileName,
-          showNotification: true,
-          openFileFromNotification: true,
+      final alreadyExists =
+          filesList.any((item) => item[listKey] == cleanTitle);
+      if (alreadyExists) {
+        dialogBuilder(
+          context: context,
+          titleText: 'تم تحميل هذا الملف مسبقا!',
+          disableText: '',
+          enableText: 'اغلاق',
+          enable: () => Navigator.of(context).pop(),
         );
-
-        // English comment: Save file info after download completion
-        audioesList.add({
-          'audioName': filetitle,
-          'fileName': fileName,
-        });
-
-        Constants.getStorage.write('audioes', audioesList);
-      }
-    } else if (fileFormt == '.pdf') {
-      await GetStorage.init('pdfs');
-      List pdfsList = Constants.getStorage.read('pdfs') ?? [];
-
-      var find = false;
-      for (var map in pdfsList) {
-        if (map?.containsKey("pdfName") ?? false) {
-          if (map!["fileName"] == fileName) {
-            find = true;
-            dialogBuilder(
-              context: context,
-              titleText: 'تم تحميل هذا الملف مسبقا!',
-              disableText: '',
-              enableText: 'اغلاق',
-              enable: () {
-                Navigator.of(context).pop();
-              },
-            );
-          }
-        }
+        return;
       }
 
-      if (!find) {
-        // English comment: Get platform-specific storage directory
-        final Directory baseDir;
-        if (Platform.isAndroid) {
-          baseDir = Directory('/storage/emulated/0/Download');
-        } else {
-          baseDir = await getApplicationDocumentsDirectory();
-        }
+      final appDocDir = await getApplicationDocumentsDirectory();
+      final baseStorage =
+          Platform.isAndroid ? '/storage/emulated/0/Download' : appDocDir.path;
 
-        final savedDir = baseDir.path;
-
-        // English comment: Start downloading the PDF file
-        await FlutterDownloader.enqueue(
-          url: url.trim(),
-          savedDir: savedDir,
-          fileName: fileName,
-          showNotification: true, // Show notification while downloading
-          openFileFromNotification: true, // Open file on tap from notification
-        );
-
-        // English comment: Save PDF file info after enqueuing download
-        pdfsList.add({
-          'pdfName': filetitle,
-          'fileName': fileName,
-        });
-
-        Constants.getStorage.write('pdfs', pdfsList);
+      final downloadDir = Directory(baseStorage);
+      if (!(await downloadDir.exists())) {
+        await downloadDir.create(recursive: true);
       }
+
+      final fullFilePath = '$baseStorage/$fileName';
+
+      /// ✅ اینجا پنل رو فعال کن با استفاده از ValueNotifier
+      DownloadProgress.progress.value = 0;
+      showDownloadPanelNotifier.value = true; // مهم: تغییر مقدار notifier
+
+      final taskId = await FlutterDownloader.enqueue(
+        url: url.trim(),
+        savedDir: baseStorage,
+        fileName: fileName,
+        showNotification: true,
+        openFileFromNotification: true,
+      );
+
+      // ذخیره فایل
+      filesList.add({
+        listKey: cleanTitle,
+        'fileName': fileName,
+        'filePath': fullFilePath,
+      });
+      storage.write(boxName, filesList);
+      print('filesList after save: ${storage.read(boxName)}');
     }
+  }
+
+  /// باید توی initState ویجت اصلی اپلیکیشن صدا زده بشه
+  void bindBackgroundIsolate() {
+    final port = ReceivePort();
+
+    IsolateNameServer.removePortNameMapping('downloader_send_port');
+    IsolateNameServer.registerPortWithName(
+        port.sendPort, 'downloader_send_port');
+
+    port.listen((dynamic data) {
+      final String id = data[0] as String;
+      final int status = data[1] as int;
+      final int progress = data[2] as int;
+
+      DownloadProgress.progress.value = progress;
+
+      if (status == DownloadTaskStatus.complete || progress == 100) {
+        showDownloadPanelNotifier.value =
+            false; // Hide the panel when download is complete
+      } else if (status == DownloadTaskStatus.failed) {
+        showDownloadPanelNotifier.value = false; // Also hide on failure
+      } else {
+        showDownloadPanelNotifier.value = true; // Show panel while downloading
+      }
+    });
   }
 }

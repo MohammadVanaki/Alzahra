@@ -1,3 +1,6 @@
+import 'dart:isolate';
+import 'dart:ui';
+
 import 'package:alzahra/config/light_theme.dart';
 import 'package:alzahra/config/notification.dart';
 import 'package:alzahra/features/feature_intro/screens/splash_screen.dart';
@@ -9,9 +12,20 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:gap/gap.dart';
 import 'package:lottie/lottie.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:get/get.dart';
+import 'config/connectivity_controller.dart';
+
+final ValueNotifier<bool> showDownloadPanelNotifier = ValueNotifier(false);
+
+/// notifier for tracking download progress
+class DownloadProgress {
+  static ValueNotifier<int> progress = ValueNotifier(0);
+}
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized;
+  WidgetsFlutterBinding.ensureInitialized();
+
+  /// Custom error widget
   ErrorWidget.builder = (FlutterErrorDetails details) {
     return Material(
       child: Container(
@@ -31,15 +45,35 @@ void main() async {
       ),
     );
   };
+
+  /// Init local storage
   await GetStorage.init();
+
+  /// Init Flutter Downloader
   await FlutterDownloader.initialize(
     debug: true,
     ignoreSsl: true,
   );
+
+  /// Register background download callback
+  FlutterDownloader.registerCallback(downloadCallback);
+
+  /// Init Firebase
   await Firebase.initializeApp();
   await FirebaseMessaging.instance.subscribeToTopic("general");
+
+  /// Init Firebase Notification API
   await FirebaseApi().inintNotifications();
+
+  /// Run app
   runApp(const MyApp());
+}
+
+@pragma('vm:entry-point')
+void downloadCallback(String id, int status, int progress) {
+  final SendPort? send =
+      IsolateNameServer.lookupPortByName('downloader_send_port');
+  send?.send([id, status, progress]);
 }
 
 class MyApp extends StatelessWidget {
@@ -47,7 +81,8 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    Get.put(ConnectivityController());
+    return GetMaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'منصة الزهراء',
       themeMode: ThemeMode.system,

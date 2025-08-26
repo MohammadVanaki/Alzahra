@@ -6,10 +6,11 @@ import 'package:flutter/material.dart';
 class PlayerWidget extends StatefulWidget {
   final AudioPlayer player;
   final String title;
-
+  final VoidCallback onClose;
   const PlayerWidget({
     required this.player,
     required this.title,
+    required this.onClose,
     super.key,
   });
 
@@ -79,73 +80,94 @@ class _PlayerWidgetState extends State<PlayerWidget> {
   Widget build(BuildContext context) {
     final color = Theme.of(context).primaryColor;
     return Container(
-      padding: EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: Colors.black38,
+        color: const Color.fromARGB(255, 6, 82, 79).withAlpha(50),
         borderRadius: BorderRadius.circular(10),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton(
-                key: const Key('play_button'),
-                onPressed: _isPlaying ? null : _play,
-                iconSize: 35.0,
-                icon: const Icon(Icons.play_arrow),
-                color: color,
-              ),
-              IconButton(
-                key: const Key('pause_button'),
-                onPressed: _isPlaying ? _pause : null,
-                iconSize: 35.0,
-                icon: const Icon(Icons.pause),
-                color: color,
-              ),
-              IconButton(
-                key: const Key('stop_button'),
-                onPressed: _isPlaying || _isPaused ? _stop : null,
-                iconSize: 35.0,
-                icon: const Icon(Icons.stop),
-                color: color,
-              ),
-            ],
+      child: Stack(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: <Widget>[
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      key: const Key('play_button'),
+                      onPressed: _isPlaying ? null : _play,
+                      iconSize: 35.0,
+                      icon: const Icon(Icons.play_arrow),
+                      color: color,
+                    ),
+                    IconButton(
+                      key: const Key('pause_button'),
+                      onPressed: _isPlaying ? _pause : null,
+                      iconSize: 35.0,
+                      icon: const Icon(Icons.pause),
+                      color: color,
+                    ),
+                    IconButton(
+                      key: const Key('stop_button'),
+                      onPressed: _isPlaying || _isPaused ? _stop : null,
+                      iconSize: 35.0,
+                      icon: const Icon(Icons.stop),
+                      color: color,
+                    ),
+                  ],
+                ),
+
+                // Audio progress slider
+                Slider(
+                  onChanged: (value) {
+                    final duration = _duration;
+                    if (duration == null) return;
+                    final position = value * duration.inMilliseconds;
+                    player.seek(Duration(milliseconds: position.round()));
+                  },
+                  value: (_position != null &&
+                          _duration != null &&
+                          _position!.inMilliseconds > 0 &&
+                          _position!.inMilliseconds < _duration!.inMilliseconds)
+                      ? _position!.inMilliseconds / _duration!.inMilliseconds
+                      : 0.0,
+                ),
+
+                // Title and position/duration
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  mainAxisSize: MainAxisSize.max,
+                  children: [
+                    Text(
+                      widget.title,
+                      style: TextStyle(fontSize: 11),
+                    ),
+                    Text(
+                      _position != null
+                          ? '$_positionText / $_durationText'
+                          : _duration != null
+                              ? _durationText
+                              : '',
+                      style: const TextStyle(fontSize: 16.0),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-          Slider(
-            onChanged: (value) {
-              final duration = _duration;
-              if (duration == null) {
-                return;
-              }
-              final position = value * duration.inMilliseconds;
-              player.seek(Duration(milliseconds: position.round()));
-            },
-            value: (_position != null &&
-                    _duration != null &&
-                    _position!.inMilliseconds > 0 &&
-                    _position!.inMilliseconds < _duration!.inMilliseconds)
-                ? _position!.inMilliseconds / _duration!.inMilliseconds
-                : 0.0,
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            mainAxisSize: MainAxisSize.max,
-            children: [
-              Text(
-                widget.title,
-                style: TextStyle(fontSize: 11),
+          Positioned(
+            top: 0,
+            left: 0,
+            child: IconButton(
+              icon: Icon(
+                Icons.close,
+                size: 35.0,
+                color: color,
               ),
-              Text(
-                _position != null
-                    ? '$_positionText / $_durationText'
-                    : _duration != null
-                        ? _durationText
-                        : '',
-                style: const TextStyle(fontSize: 16.0),
-              ),
-            ],
+              onPressed: widget.onClose,
+            ),
           ),
         ],
       ),
